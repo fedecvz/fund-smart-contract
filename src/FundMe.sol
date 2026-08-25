@@ -10,10 +10,10 @@ error FundMe_NotOwner();
 contract FundMe {
     using PriceConverter for uint256;
 
-    mapping(address => uint256) public addressToAmountFunded;
-    address[] public funders;
+    mapping(address => uint256) private s_addressToAmountFunded;
+    address[] private s_funders;
 
-    address public immutable i_owner;
+    address private immutable i_owner;
     uint256 public constant MINIMUM_USD = 5 * 10 ** 18;
     AggregatorV3Interface private s_priceFeed;
 
@@ -24,8 +24,8 @@ contract FundMe {
 
     function fund() public payable {
         require(msg.value.getConversionRate(s_priceFeed) >= MINIMUM_USD, "You need to spend more ETH!");
-        addressToAmountFunded[msg.sender] += msg.value;
-        funders.push(msg.sender);
+        s_addressToAmountFunded[msg.sender] += msg.value;
+        s_funders.push(msg.sender);
     }
 
     function getVersion() public view returns (uint256) {
@@ -37,12 +37,32 @@ contract FundMe {
         _;
     }
 
-    function withdraw() public onlyOwner {
-        for (uint256 funderIndex = 0; funderIndex < funders.length; funderIndex++) {
-            address funder = funders[funderIndex];
-            addressToAmountFunded[funder] = 0;
+    function cheaperWithdraw() public onlyOwner {
+        // It's cheaper because caches the s_funders.length in fundersLength
+        // Each access to a storage arrays's .length costs an SLOAD (storage read)
+        // The loop condition reads fundersLength from memory/stack instead of hittin storage again
+        uint256 fundersLength = s_funders.length;
+        for (
+            uint256 funderIndex = 0;
+            funderIndex < fundersLength;
+            funderIndex++
+        ) {
+            address funder = s_funders[funderIndex];
+            s_addressToAmountFunded[funder] = 0;
         }
-        funders = new address[](0);
+
+        s_funders = new address[](0);
+
+        (bool callSuccess,) = payable(msg.sender).call{value: address(this).balance}("");
+        require(callSuccess, "Call failed");
+    }
+
+    function withdraw() public onlyOwner {
+        for (uint256 funderIndex = 0; funderIndex < s_funders.length; funderIndex++) {
+            address funder = s_funders[funderIndex];
+            s_addressToAmountFunded[funder] = 0;
+        }
+        s_funders = new address[](0);
         // // transfer
         // payable(msg.sender).transfer(address(this).balance);
 
@@ -72,6 +92,20 @@ contract FundMe {
 
     receive() external payable {
         fund();
+    }
+
+    function getAddressToAmountFunded(
+        address fundingAddress
+    ) external view returns (uint256) {
+        return s_addressToAmountFunded[fundingAddress];
+    }
+
+    function getFunder(uint256 index) external view returns (address) {
+        return s_funders[index];
+    }
+
+    function getOwner() external view returns (address) {
+        return i_owner;
     }
 }
 
