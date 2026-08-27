@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import { Test, console } from "forge-std/Test.sol";
-import { FundMe } from "src/FundMe.sol";
-import { DeployFundMe } from "../script/DeployFundMe.s.sol";
+import {Test, console} from "forge-std/Test.sol";
+import {FundMe} from "src/FundMe.sol";
+import {DeployFundMe} from "../../script/DeployFundMe.s.sol";
 
 contract FundMeTest is Test {
     FundMe fundMe;
     address USER = makeAddr("John");
     uint256 constant SEND_VALUE = 0.1 ether; //10e18
     uint256 constant STARTING_BALANCE = 10 ether;
- 
+
     function setUp() external {
         DeployFundMe deployFundMe = new DeployFundMe();
         fundMe = deployFundMe.run();
@@ -71,17 +71,14 @@ contract FundMeTest is Test {
         uint256 endingFundMeBalance = address(fundMe).balance;
 
         assertEq(endingFundMeBalance, 0);
-        assertEq(
-            startingOwnerBalance + startingFundMeBalance,
-            endingOwnerBalance
-        );
+        assertEq(startingOwnerBalance + startingFundMeBalance, endingOwnerBalance);
     }
 
     function testWithdrawFromMultipleFunders() public {
         uint160 numberOfFunders = 10;
         uint160 startingFunderIndex = 1;
 
-        for(uint160 i = startingFunderIndex; i < numberOfFunders; i++) {
+        for (uint160 i = startingFunderIndex; i < numberOfFunders; i++) {
             // vm.prank() new address
             // vm.deal() new address
             // address
@@ -97,17 +94,14 @@ contract FundMeTest is Test {
         vm.stopPrank();
 
         assert(address(fundMe).balance == 0);
-        assert(
-            startingOwnerBalance + startingFundMeBalance ==
-            fundMe.getOwner().balance
-        );
+        assert(startingOwnerBalance + startingFundMeBalance == fundMe.getOwner().balance);
     }
 
     function testWithdrawFromMultipleFundersCheaper() public {
         uint160 numberOfFunders = 10;
         uint160 startingFunderIndex = 1;
 
-        for(uint160 i = startingFunderIndex; i < numberOfFunders; i++) {
+        for (uint160 i = startingFunderIndex; i < numberOfFunders; i++) {
             // vm.prank() new address
             // vm.deal() new address
             // address
@@ -123,9 +117,6 @@ contract FundMeTest is Test {
         vm.stopPrank();
 
         assert(address(fundMe).balance == 0);
-        assert(
-            startingOwnerBalance + startingFundMeBalance ==
-            fundMe.getOwner().balance
-        );
+        assert(startingOwnerBalance + startingFundMeBalance == fundMe.getOwner().balance);
     }
 }
